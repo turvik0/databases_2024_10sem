@@ -21,3 +21,10 @@ Update:
 Delete:
 ![alt text](image-7.png)
 
+Using indexes improves query performance,lets see firstly without index:
+![alt text](image-8.png)
+then creating index
+![alt text](image-9.png)
+and the same query takes less time to execute, and less people to examine
+![alt text](image-10.png)
+
