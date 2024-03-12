@@ -1,0 +1,25 @@
+version: "3"
+name: mongodb
+networks:
+  mongodb_network:
+    driver: bridge
+
+volumes:
+  mdb:
+    name: mdb
+  mdbcfg:
+    name: mdbcfg
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - 27017:27017
+    volumes:
+      - mdb:/data/db
+      - mdbcfg:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=rootuser
+      -  MONGO_INITDB_ROOT_PASSWORD=rootpass
+    networks:
+      - mongodb_network
