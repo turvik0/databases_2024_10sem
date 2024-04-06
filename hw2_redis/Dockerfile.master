@@ -1,0 +1,6 @@
+FROM redis:latest
+
+RUN mkdir /usr/local/etc/redis/
+COPY redis_master.conf /usr/local/etc/redis/redis.conf
+
+CMD [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
