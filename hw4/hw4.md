@@ -163,14 +163,17 @@ clickhouse-client --query "
 └─────────┘
 ```
 Найдем например самые упоминаемые ингридиенты в рецептах:
-SELECT \
-    arrayJoin(NER) AS k, \
-    count() AS c \
-FROM recipes \
-GROUP BY k \
-ORDER BY c DESC \
-LIMIT 50 \
+```
+SELECT 
+    arrayJoin(NER) AS k,
+    count() AS c
+FROM recipes
+GROUP BY k
+ORDER BY c DESC
+LIMIT 50
+```
 вывод:
+```
 ┌─k────────────────────┬──────c─┐
 │ salt                 │ 890741 │
 │ sugar                │ 620027 │
@@ -225,8 +228,9 @@ LIMIT 50 \
 └──────────────────────┴────────┘
 
 50 rows in set. Elapsed: 0.112 sec. Processed 2.23 million rows, 361.57 MB (19.99 million rows/s., 3.24 GB/s.)
-
+```
 Самые сложные рецепты с клубникой:
+```
 SELECT
     title,
     length(NER),
@@ -235,8 +239,9 @@ FROM recipes
 WHERE has(NER, 'strawberry')
 ORDER BY length(directions) DESC
 LIMIT 10;
-
+```
 вывод:
+```
 ┌─title────────────────────────────────────────────────────────────┬─length(NER)─┬─length(directions)─┐
 │ Chocolate-Strawberry-Orange Wedding Cake                         │          24 │                126 │
 │ Strawberry Cream Cheese Crumble Tart                             │          19 │                 47 │
@@ -251,7 +256,7 @@ LIMIT 10;
 └──────────────────────────────────────────────────────────────────┴─────────────┴────────────────────┘
 
 10 rows in set. Elapsed: 0.215 sec. Processed 2.23 million rows, 1.48 GB (10.35 million rows/s., 6.86 GB/s.)
-
+```
 
 # q. Как продолжить самостоятельное изучение языка запросов с помощью демобазы. Если демобазы нет, то создайте ее.
 
