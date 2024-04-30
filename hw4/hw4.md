@@ -100,18 +100,20 @@ CREATE USER user1 WITH PASSWORD = 'password'; \
 
 Также можно использовать XML-файлы для настройки пользователей и их прав. Например, для создания пользователя и назначения ему прав можно использовать следующий XML-файл:
 
-<users> \
-  <user> \
-    <name>user1</name> \
-    <password>password</password> \
-    <grants> \
-      <grant> \
-        <database>.*</database> \
-        <privilege>SELECT</privilege> \
-      </grant> \
-    </grants> \
-  </user> \
-</users> \
+```xml
+<users>
+  <user>
+    <name>user1</name>
+    <password>password</password>
+    <grants>
+      <grant>
+        <database>.*</database>
+        <privilege>SELECT</privilege>
+      </grant>
+    </grants>
+  </user>
+</users>
+
 
 
 # o. Какие сообщества развивают данную СУБД? Кто в проекте имеет права на коммит и создание дистрибутива версий? Расскажите об этих людей и/или компаниях.
