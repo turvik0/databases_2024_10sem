@@ -125,6 +125,8 @@ CREATE USER user1 WITH PASSWORD = 'password'; \
 Возьмем данные кулинарных рецептов: https://recipenlg.cs.put.poznan.pl/dataset.
 
 Создадим таблицу:
+
+```
 CREATE TABLE recipes
 (
     title String,
@@ -134,7 +136,9 @@ CREATE TABLE recipes
     source LowCardinality(String),
     NER Array(String)
 ) ENGINE = MergeTree ORDER BY title;
+```
 Добавим данные:
+```
 clickhouse-client --query "
     INSERT INTO recipes
     SELECT
@@ -147,12 +151,17 @@ clickhouse-client --query "
     FROM input('num UInt32, title String, ingredients String, directions String, link String, source LowCardinality(String), NER String')
     FORMAT CSVWithNames
 " --input_format_with_names_use_header 0 --format_csv_allow_single_quote 0 --input_format_allow_errors_num 10 < full_dataset.csv
+```
  проверим данные:
+ ```
  SELECT count() FROM recipes;
- вывод: \
-┌─count()─┐\
-│ 2231141 │\
-└─────────┘\
+ ```
+ вывод:
+ ```
+┌─count()─┐
+│ 2231141 │
+└─────────┘
+```
 Найдем например самые упоминаемые ингридиенты в рецептах:
 SELECT \
     arrayJoin(NER) AS k, \
