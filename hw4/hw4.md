@@ -44,24 +44,182 @@ k. Какие методы восстановления поддерживают
 ClickHouse поддерживает создание резервных копий и восстановление из них. Это позволяет обеспечить высокую доступность и масштабируемость при работе с большими объемами данных.
 
 l. Расскажите про шардинг в вашей конкретной СУБД. Какие типы используются? Принцип работы.
-ClickHouse использует шардинг для обеспечения масштабируемости и высокой доступности. Он поддерживает географически распределенные реплики и репликацию данных на различных носителях.
+Шардирование в ClickHouse является стратегией горизонтального масштабирования кластера, при которой части одной базы данных размещаются на разных шардах. Шард состоит из одного или нескольких хостов-реплик. Запрос на запись или чтение в шард может быть отправлен на любую его реплику, выделенного мастера нет.
+Принцип работы
+Шардирование позволяет распределить фрагменты данных из одной базы по разным узлам кластера, увеличивая пропускную способность и снижая задержку обработки данных
+Шард ClickHouse – это группа копий данных (реплик) для обеспечения отказоустойчивости СУБД, он состоит из одного или нескольких хостов-реплик
+Типы шардирования:
+В ClickHouse используются различные типы шардирования, такие как:
+Распределение данных по полю - данные распределяются по полю, и каждый шард содержит данные, которые относятся к данному полю
+
+Распределение данных по ключу - данные распределяются по ключу, и каждый шард содержит данные, которые относятся к данному ключу
+
+Пример
+Для примера рассмотрим, как можно распределить данные по полю distributed_field:
+![alt text](image.png)
+
+Здесь мы заливаем данные с первого шарда на второй шард, при этом отбираем с первого шарда записи, остаток от деления поля distributed_field на X (количество шардов) равен номеру шарда за вычетом единицы
 
 m. Возможно ли применить термины Data Mining, Data Warehousing и OLAP в вашей СУБД?
 Да, ClickHouse может быть использована для Data Mining, Data Warehousing и OLAP. Она поддерживает векторизованное выполнение запросов, что обеспечивает высокую производительность при работе с большими объемами данных.
 
 n. Какие методы защиты поддерживаются вашей СУБД? Шифрование трафика, модели авторизации и т.п.
-ClickHouse поддерживает шифрование трафика и модели авторизации, что обеспечивает безопасность при работе с данными.
+
+Шифрование трафика
+ClickHouse поддерживает шифрование трафика с использованием TLS. Для включения TLS можно отредактировать файл /etc/clickhouse-server/config.d/remote_servers.xml в случае с ClickHouse 20.10 или более поздней версии.
+
+Модели авторизации
+ClickHouse поддерживает модели авторизации, которые определяют, какие пользователи могут выполнять какие действия с данными. Например, можно определить, какие пользователи могут выполнять запросы, а какие только просматривать данные.
+
+Для создания пользователя и назначения ему прав можно использовать следующий SQL-запрос:
+CREATE USER user1 WITH PASSWORD = 'password';
+GRANT SELECT ON * TO user1;
+
+Также можно использовать XML-файлы для настройки пользователей и их прав. Например, для создания пользователя и назначения ему прав можно использовать следующий XML-файл:
+<users>
+  <user>
+    <name>user1</name>
+    <password>password</password>
+    <grants>
+      <grant>
+        <database>.*</database>
+        <privilege>SELECT</privilege>
+      </grant>
+    </grants>
+  </user>
+</users>
+
+
 o. Какие сообщества развивают данную СУБД? Кто в проекте имеет права на коммит и создание дистрибутива версий? Расскажите об этих людей и/или компаниях.
 ClickHouse развивается сообществом разработчиков, которые имеют права на коммит и создание дистрибутива версий. Яндекс является основным разработчиком ClickHouse, но также есть другие компании и индивидуальные разработчики, которые принимают участие в разработке и поддержке проекта.
 
 p. Создайте свои собственные данные для демонстрации работы СУБД.
-Для создания своих данных для демонстрации работы ClickHouse можно использовать инструменты, такие как DBeaver, для создания таблиц и загрузки данных.
+Возьмем данные кулинарных рецептов: https://recipenlg.cs.put.poznan.pl/dataset.
+Создадим таблицу:
+CREATE TABLE recipes
+(
+    title String,
+    ingredients Array(String),
+    directions Array(String),
+    link String,
+    source LowCardinality(String),
+    NER Array(String)
+) ENGINE = MergeTree ORDER BY title;
+Добавим данные:
+clickhouse-client --query "
+    INSERT INTO recipes
+    SELECT
+        title,
+        JSONExtract(ingredients, 'Array(String)'),
+        JSONExtract(directions, 'Array(String)'),
+        link,
+        source,
+        JSONExtract(NER, 'Array(String)')
+    FROM input('num UInt32, title String, ingredients String, directions String, link String, source LowCardinality(String), NER String')
+    FORMAT CSVWithNames
+" --input_format_with_names_use_header 0 --format_csv_allow_single_quote 0 --input_format_allow_errors_num 10 < full_dataset.csv
+ проверим данные:
+ SELECT count() FROM recipes;
+ вывод:
+┌─count()─┐
+│ 2231141 │
+└─────────┘
+Найдем например самые упоминаемые ингридиенты в рецептах:
+SELECT
+    arrayJoin(NER) AS k,
+    count() AS c
+FROM recipes
+GROUP BY k
+ORDER BY c DESC
+LIMIT 50
+вывод:
+┌─k────────────────────┬──────c─┐
+│ salt                 │ 890741 │
+│ sugar                │ 620027 │
+│ butter               │ 493823 │
+│ flour                │ 466110 │
+│ eggs                 │ 401276 │
+│ onion                │ 372469 │
+│ garlic               │ 358364 │
+│ milk                 │ 346769 │
+│ water                │ 326092 │
+│ vanilla              │ 270381 │
+│ olive oil            │ 197877 │
+│ pepper               │ 179305 │
+│ brown sugar          │ 174447 │
+│ tomatoes             │ 163933 │
+│ egg                  │ 160507 │
+│ baking powder        │ 148277 │
+│ lemon juice          │ 146414 │
+│ Salt                 │ 122557 │
+│ cinnamon             │ 117927 │
+│ sour cream           │ 116682 │
+│ cream cheese         │ 114423 │
+│ margarine            │ 112742 │
+│ celery               │ 112676 │
+│ baking soda          │ 110690 │
+│ parsley              │ 102151 │
+│ chicken              │ 101505 │
+│ onions               │  98903 │
+│ vegetable oil        │  91395 │
+│ oil                  │  85600 │
+│ mayonnaise           │  84822 │
+│ pecans               │  79741 │
+│ nuts                 │  78471 │
+│ potatoes             │  75820 │
+│ carrots              │  75458 │
+│ pineapple            │  74345 │
+│ soy sauce            │  70355 │
+│ black pepper         │  69064 │
+│ thyme                │  68429 │
+│ mustard              │  65948 │
+│ chicken broth        │  65112 │
+│ bacon                │  64956 │
+│ honey                │  64626 │
+│ oregano              │  64077 │
+│ ground beef          │  64068 │
+│ unsalted butter      │  63848 │
+│ mushrooms            │  61465 │
+│ Worcestershire sauce │  59328 │
+│ cornstarch           │  58476 │
+│ green pepper         │  58388 │
+│ Cheddar cheese       │  58354 │
+└──────────────────────┴────────┘
+
+50 rows in set. Elapsed: 0.112 sec. Processed 2.23 million rows, 361.57 MB (19.99 million rows/s., 3.24 GB/s.)
+
+Самые сложные рецепты с клубникой:
+SELECT
+    title,
+    length(NER),
+    length(directions)
+FROM recipes
+WHERE has(NER, 'strawberry')
+ORDER BY length(directions) DESC
+LIMIT 10;
+
+вывод:
+┌─title────────────────────────────────────────────────────────────┬─length(NER)─┬─length(directions)─┐
+│ Chocolate-Strawberry-Orange Wedding Cake                         │          24 │                126 │
+│ Strawberry Cream Cheese Crumble Tart                             │          19 │                 47 │
+│ Charlotte-Style Ice Cream                                        │          11 │                 45 │
+│ Sinfully Good a Million Layers Chocolate Layer Cake, With Strawb │          31 │                 45 │
+│ Sweetened Berries With Elderflower Sherbet                       │          24 │                 44 │
+│ Chocolate-Strawberry Mousse Cake                                 │          15 │                 42 │
+│ Rhubarb Charlotte with Strawberries and Rum                      │          20 │                 42 │
+│ Chef Joey's Strawberry Vanilla Tart                              │           7 │                 37 │
+│ Old-Fashioned Ice Cream Sundae Cake                              │          17 │                 37 │
+│ Watermelon Cake                                                  │          16 │                 36 │
+└──────────────────────────────────────────────────────────────────┴─────────────┴────────────────────┘
+
+10 rows in set. Elapsed: 0.215 sec. Processed 2.23 million rows, 1.48 GB (10.35 million rows/s., 6.86 GB/s.)
+
 
 q. Как продолжить самостоятельное изучение языка запросов с помощью демобазы. Если демобазы нет, то создайте ее.
-Для продолжения самостоятельного изучения языка запросов с помощью ClickHouse можно использовать руководства и документацию, предоставляемые на официальном сайте ClickHouse. Если демобазы нет, то можно создать ее, используя инструменты, такие как DBeaver, для создания таблиц и загрузки данных.
+Для продолжения самостоятельного изучения языка запросов с помощью ClickHouse можно использовать руководства и документацию, предоставляемые на официальном сайте ClickHouse. https://clickhouse.com/docs/ru
 
 r. Где найти документацию и пройти обучение
-Документацию и обучение можно найти на официальном сайте ClickHouse. Там есть руководства, справочники и видеоуроки, которые помогут вам начать использовать ClickHouse.
+На официальном сайте в разделе docs https://clickhouse.com/docs/ru
 
 s. Как быть в курсе происходящего
 Чтобы быть в курсе происходящего с ClickHouse, можно подписаться на официальный блог и новостную ленту, а также следить за сообществом разработчиков на различных форумах и платформах.
